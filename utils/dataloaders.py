@@ -580,12 +580,15 @@ class LoadImagesAndLabels(Dataset):
                 img, labels = mixup(img, labels, *self.load_mosaic(random.randint(0, self.n - 1)))
 
         else:
+            # TODO HEIN done: need to change self.load_image() for 4 channels
             # Load image
-            img, (h0, w0), (h, w) = self.load_image(index)
-
+            # resized image, (orignal size), (resized size)
+            img, (h0, w0), (h, w) = self.load_image(index) # img is numpy.ndarray
             # Letterbox
+            # shape is the target shape that we want to achieve
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
             img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
+            # shapes is a tuple with (original size), ((scaled ratio, padding))
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
@@ -633,6 +636,7 @@ class LoadImagesAndLabels(Dataset):
         if nl:
             labels_out[:, 1:] = torch.from_numpy(labels)
 
+    # TODO HEIN might need to change this for 4 channels
         # Convert
         img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
@@ -641,12 +645,17 @@ class LoadImagesAndLabels(Dataset):
 
     def load_image(self, i):
         # Loads 1 image from dataset index 'i', returns (im, original hw, resized hw)
-        im, f, fn = self.ims[i], self.im_files[i], self.npy_files[i],
+        im, f, fn = self.ims[i], self.im_files[i], self.npy_files[i]
+        d_path = (Path(f).parent.parent / "depth" / Path(f).stem)
+        d_path = d_path.with_suffix(".png")
         if im is None:  # not cached in RAM
             if fn.exists():  # load npy
                 im = np.load(fn)
             else:  # read image
                 im = cv2.imread(f)  # BGR
+                d_img = cv2.imread(str(d_path), cv2.IMREAD_UNCHANGED)
+                d_img = np.expand_dims(d_img, axis=2)
+                im = np.append(im, d_img, axis=2)
                 assert im is not None, f'Image Not Found {f}'
             h0, w0 = im.shape[:2]  # orig hw
             r = self.img_size / max(h0, w0)  # ratio
@@ -660,6 +669,7 @@ class LoadImagesAndLabels(Dataset):
         # Saves an image as an *.npy file for faster loading
         f = self.npy_files[i]
         if not f.exists():
+            # TODO HEIN - change here for 4 channels
             np.save(f.as_posix(), cv2.imread(self.im_files[i]))
 
     def load_mosaic(self, index):
