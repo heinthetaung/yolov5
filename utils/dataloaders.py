@@ -18,7 +18,6 @@ from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
 from zipfile import ZipFile
-
 import numpy as np
 import torch
 import torch.nn.functional as F
