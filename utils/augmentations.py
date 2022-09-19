@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
+import copy
 
 from utils.general import LOGGER, check_version, colorstr, resample_segments, segment2box
 from utils.metrics import bbox_ioa
@@ -66,17 +67,20 @@ def denormalize(x, mean=IMAGENET_MEAN, std=IMAGENET_STD):
 def augment_hsv(im, hgain=0.5, sgain=0.5, vgain=0.5):
     # HSV color-space augmentation
     if hgain or sgain or vgain:
-        r = np.random.uniform(-1, 1, 3) * [hgain, sgain, vgain] + 1  # random gains
-        hue, sat, val = cv2.split(cv2.cvtColor(im, cv2.COLOR_BGR2HSV))
-        dtype = im.dtype  # uint8
-
+        r = np.random.uniform(-1, 1, 3) * [hgain, sgain, vgain] + 1  # random gains 
+        rgb_img, angle_img = im[...,:3], im[...,3:]
+        hue, sat, val = cv2.split(cv2.cvtColor(rgb_img, cv2.COLOR_BGR2HSV))
+        dtype = rgb_img.dtype  # uint8
+        tmp_img = np.zeros_like(rgb_img)
         x = np.arange(0, 256, dtype=r.dtype)
         lut_hue = ((x * r[0]) % 180).astype(dtype)
         lut_sat = np.clip(x * r[1], 0, 255).astype(dtype)
         lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
 
         im_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val)))
-        cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, dst=im)  # no return needed
+        cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, dst=tmp_img)  # no return needed
+        np.append(tmp_img, angle_img, axis=2)
+        im = copy.deepcopy(tmp_img)
 
 
 def hist_equalize(im, clahe=True, bgr=False):
