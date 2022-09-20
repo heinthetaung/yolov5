@@ -257,7 +257,10 @@ class LoadImages:
             im = self.transforms(im0)  # transforms
         else:
             im = letterbox(im0, self.img_size, stride=self.stride, auto=self.auto)[0]  # padded resize
-            im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+            im, d = im[...,:3], im[...,3:]
+            im = im[...,::-1]
+            im = np.append(im, d, axis=2)
+            im = im.transpose((2, 0, 1))  # HWC to CHW, BGR to RGB
             im = np.ascontiguousarray(im)  # contiguous
 
         return path, im, im0, self.cap, s
@@ -637,7 +640,11 @@ class LoadImagesAndLabels(Dataset):
 
     # TODO HEIN might need to change this for 4 channels
         # Convert
-        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        # img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        img, d = img[...,:3], img[...,3:]
+        img = img[...,::-1]
+        img = np.append(img, d, axis=2)
+        img = img.transpose((2, 0, 1))
         img = np.ascontiguousarray(img)
 
         return torch.from_numpy(img), labels_out, self.im_files[index], shapes

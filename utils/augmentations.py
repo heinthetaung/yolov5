@@ -393,7 +393,11 @@ class ToTensor:
         self.half = half
 
     def __call__(self, im):  # im = np.array HWC in BGR order
-        im = np.ascontiguousarray(im.transpose((2, 0, 1))[::-1])  # HWC to CHW -> BGR to RGB -> contiguous
+        im, d = im[...,:3], im[...,3:]
+        im = im[...,::-1]
+        im = np.append(im, d, axis=2)
+        im = im.transpose((2, 0, 1))
+        im = np.ascontiguousarray(im)  # HWC to CHW -> BGR to RGB -> contiguous
         im = torch.from_numpy(im)  # to torch
         im = im.half() if self.half else im.float()  # uint8 to fp16/32
         im /= 255.0  # 0-255 to 0.0-1.0

@@ -199,7 +199,10 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
             labels_out[:, 1:] = torch.from_numpy(labels)
 
         # Convert
-        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        img, d = img[...,:3], img[...,3:]
+        img = img[...,::-1]
+        img = np.append(img, d, axis=2)
+        img = img.transpose((2, 0, 1))  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
 
         return (torch.from_numpy(img), labels_out, self.im_files[index], shapes, masks)
