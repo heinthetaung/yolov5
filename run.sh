@@ -1,0 +1,1 @@
+python -m torch.distributed.run --nproc_per_node 4 train.py --batch-size 192 --cfg yolov5m.yaml --weights yolov5m.pt --data VisDrone.yaml --img 1024 --epochs 300 --noautoanchor --rect --cache ram --device 0,1,2,3
