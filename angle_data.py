@@ -21,7 +21,7 @@ def add_angle_data(img, angle, height):
 img_sample1 = '../datasets/VisDrone/VisDrone2019-DET-val/images'
 img_sample2 = '../datasets/VisDrone/VisDrone2019-DET-train/images'
 img_sample3 = '../datasets/VisDrone/VisDrone2019-DET-test-dev/images'
-img_samples = [img_sample1 img_sample2 img_sample3]
+img_samples = [img_sample1, img_sample2, img_sample3]
 for img_sample in img_samples:
     p = Path(img_sample)
     img_files = [x for x in p.glob("*.jpg") if x.is_file()]
