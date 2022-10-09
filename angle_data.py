@@ -5,17 +5,15 @@ import os
 import csv
 
 def add_angle_data(img, angle, height):
-    range_set = [(0, 0), (10, 0), (20, 10),
-                (127, 1), (160, 90), (200, 160),
-                (220, 127), (250, 150) ,(255, 255)]
-    range = range_set[int(angle)-1]
-    # range = (127, 1)
+    angle_index = int(angle)
+    values = [0, 0, 0, 100, 100, 100, 150, 255, 255]
+    angle = values[angle_index-1]
+
     img_height = img.shape[0]
     img_width = img.shape[1]
-    step = (range[0]-range[1])/(img_height-1)
-    img += range[1]
+    step = 255/(img_height-1)
     for index, i in enumerate(img):
-        i += round(step*(index))
+        i += angle
     return img
 
 img_sample1 = '../datasets/VisDrone/VisDrone2019-DET-val/images'
@@ -25,6 +23,7 @@ img_samples = [img_sample1, img_sample2, img_sample3]
 for img_sample in img_samples:
     p = Path(img_sample)
     img_files = [x for x in p.glob("*.jpg") if x.is_file()]
+    img_files.sort()
 
     depth_folder = p.parent / 'depth'
     if not os.path.exists(depth_folder):
