@@ -157,7 +157,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             g1.append(v.weight)
 
     if opt.adam:
-        optimizer = Adam(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
+        optimizer = Adam(g0, lr=3e-4, betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
     else:
         optimizer = SGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
 
@@ -244,7 +244,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     # DDP mode
     if cuda and RANK != -1:
-        model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
+        # model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
+        model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK,find_unused_parameters=any(isinstance(layer, nn.MultiheadAttention) for layer in model.modules()))
+
 
     # Model parameters
     nl = de_parallel(model).model[-1].nl  # number of detection layers (to scale hyps)
