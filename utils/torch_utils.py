@@ -57,7 +57,8 @@ def smart_DDP(model):
         'torch==1.12.0 torchvision==0.13.0 DDP training is not supported due to a known issue. ' \
         'Please upgrade or downgrade torch to use DDP. See https://github.com/ultralytics/yolov5/issues/8395'
     if check_version(torch.__version__, '1.11.0'):
-        return DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, static_graph=True)
+        return DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK,find_unused_parameters=any(isinstance(layer, nn.MultiheadAttention) for layer in model.modules()))
+        # return DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, static_graph=True)
     else:
         return DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
 
@@ -327,7 +328,7 @@ def smart_optimizer(model, name='Adam', lr=0.001, momentum=0.9, decay=1e-5):
             g[0].append(v.weight)
 
     if name == 'Adam':
-        optimizer = torch.optim.Adam(g[2], lr=lr, betas=(momentum, 0.999))  # adjust beta1 to momentum
+        optimizer = torch.optim.Adam(g[2], lr=3e-4, betas=(momentum, 0.999))  # adjust beta1 to momentum
     elif name == 'AdamW':
         optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
     elif name == 'RMSProp':
