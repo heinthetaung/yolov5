@@ -366,7 +366,7 @@ class SwinTransformerLayer(nn.Module):
         Wp = int(np.ceil(W / self.window_size)) * self.window_size
         # 拥有和feature map一样的通道排列顺序，方便后续window_partition
         img_mask = torch.zeros((1, Hp, Wp, 1), device=x.device)  # [1, Hp, Wp, 1]
-        h_slices = ( (0, -self.window_size),
+        h_slices = (slice(0, -self.window_size),
                     slice(-self.window_size, -self.shift_size),
                     slice(-self.shift_size, None))
         w_slices = (slice(0, -self.window_size),
