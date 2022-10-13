@@ -331,9 +331,10 @@ class WindowAttention(nn.Module):
         # @: multiply -> [batch_size*num_windows, num_heads, Mh*Mw, embed_dim_per_head]
         # transpose: -> [batch_size*num_windows, Mh*Mw, num_heads, embed_dim_per_head]
         # reshape: -> [batch_size*num_windows, Mh*Mw, total_embed_dim]
-        x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
-        x = self.proj(x)
-        x = self.proj_drop(x)
+        with amp.autocast():
+            x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
+            x = self.proj(x)
+            x = self.proj_drop(x)
         return x
 
 class SwinTransformerLayer(nn.Module):
