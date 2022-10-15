@@ -264,6 +264,10 @@ class DetectionModel(BaseModel):
 Model = DetectionModel  # retain YOLOv5 'Model' class for backwards compatibility
 
 
+class SegmentationModel(DetectionModel):
+    # YOLOv5 segmentation model
+    def __init__(self, cfg='yolov5s-seg.yaml', ch=3, nc=None, anchors=None):
+        super().__init__(cfg, ch, nc, anchors)
 
 
 class ClassificationModel(BaseModel):
