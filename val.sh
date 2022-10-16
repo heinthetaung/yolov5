@@ -1,0 +1,1 @@
+python val.py --weights ./weights/yolov5l-xs-2.pt --img 1996 --data ./data/VisDrone.yaml --augment --save-txt  --save-conf --task val --batch-size 4 --verbose --name v5l-xs
