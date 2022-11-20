@@ -25,13 +25,11 @@ from utils.dataloaders import (img2label_paths, verify_image_label)
 prefix=''
 IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp', 'pfm'  # include image suffixes
 
-#start_path = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-val/images'
-start_path = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-train/images'
-# start_path = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-test-dev/images'
+start_path1 = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-val/images'
+start_path2 = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-train/images'
+start_path3 = '/home/xyz/Documents/learning/machine-learning/datasets/Vis/VisDrone2019-DET-test-dev/images'
 
-path = Path(start_path)
-images = list(path.glob('*.jpg'))
-images.sort()
+start_paths  = [start_path1, start_path2, start_path3]
 
 def split_img(im, labels, split_count=1):
 
@@ -53,7 +51,7 @@ def split_img(im, labels, split_count=1):
             tmp_labels[:, 2] = tmp_labels[:, 2] - x
             tmp_labels[:, 1] = tmp_labels[:, 1] - y
             tmp_labels[:, 3] = tmp_labels[:, 3] - y
-            new_labels[:, 1:5] = xyxy2xywhn(tmp_labels, W, H) # normalize to new image size
+            new_labels[:, 1:5] = np.clip(xyxy2xywhn(tmp_labels, W, H), 0, 1) # normalize to new image size
             labels_arr.append(new_labels)
 
     return im_arr, labels_arr
@@ -73,84 +71,88 @@ def parse_opt():
 
 
 def main(opt):
-    try:
-        f = []  # image files
-        for p in path if isinstance(path, list) else [path]:
-            p = Path(p)  # os-agnostic
-            if p.is_dir():  # dir
-                f += glob.glob(str(p / '**' / '*.*'), recursive=True)
-                # f = list(p.rglob('*.*'))  # pathlib
-            elif p.is_file():  # file
-                with open(p) as t:
-                    t = t.read().strip().splitlines()
-                    parent = str(p.parent) + os.sep
-                    f += [x.replace('./', parent) if x.startswith('./') else x for x in t]  # local to global path
-                    # f += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
-            else:
-                raise FileNotFoundError(f'{prefix}{p} does not exist')
-        im_files = sorted(x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
-        # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
-        assert im_files, f'{prefix}No images found'
-    except Exception as e:
-        raise Exception(f'{prefix}Error loading data from {path}: {e}\n')
+    for start_path in start_paths:
+        path = Path(start_path)
+        images = list(path.glob('*.jpg'))
+        images.sort()
+        try:
+            f = []  # image files
+            for p in path if isinstance(path, list) else [path]:
+                p = Path(p)  # os-agnostic
+                if p.is_dir():  # dir
+                    f += glob.glob(str(p / '**' / '*.*'), recursive=True)
+                    # f = list(p.rglob('*.*'))  # pathlib
+                elif p.is_file():  # file
+                    with open(p) as t:
+                        t = t.read().strip().splitlines()
+                        parent = str(p.parent) + os.sep
+                        f += [x.replace('./', parent) if x.startswith('./') else x for x in t]  # local to global path
+                        # f += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
+                else:
+                    raise FileNotFoundError(f'{prefix}{p} does not exist')
+            im_files = sorted(x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
+            # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
+            assert im_files, f'{prefix}No images found'
+        except Exception as e:
+            raise Exception(f'{prefix}Error loading data from {path}: {e}\n')
 
-    label_files = img2label_paths(im_files)
-    x = {}  # dict
-    nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
-    desc = f"{prefix}Scanning '{path.parent / path.stem}' images and labels..."
-    with Pool(NUM_THREADS) as pool:
-        pbar = tqdm(pool.imap(verify_image_label, zip(im_files, label_files, repeat(prefix))),
-                    desc=desc,
-                    total=len(im_files),
-                    bar_format=BAR_FORMAT)
-        for im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg in pbar:
-            nm += nm_f
-            nf += nf_f
-            ne += ne_f
-            nc += nc_f
-            if im_file:
-                x[im_file] = [lb, shape, segments]
-            if msg:
-                msgs.append(msg)
-            pbar.desc = f"{desc}{nf} found, {nm} missing, {ne} empty, {nc} corrupt"
+        label_files = img2label_paths(im_files)
+        x = {}  # dict
+        nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
+        desc = f"{prefix}Scanning '{path.parent / path.stem}' images and labels..."
+        with Pool(NUM_THREADS) as pool:
+            pbar = tqdm(pool.imap(verify_image_label, zip(im_files, label_files, repeat(prefix))),
+                        desc=desc,
+                        total=len(im_files),
+                        bar_format=BAR_FORMAT)
+            for im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg in pbar:
+                nm += nm_f
+                nf += nf_f
+                ne += ne_f
+                nc += nc_f
+                if im_file:
+                    x[im_file] = [lb, shape, segments]
+                if msg:
+                    msgs.append(msg)
+                pbar.desc = f"{desc}{nf} found, {nm} missing, {ne} empty, {nc} corrupt"
 
-    pbar.close()
-    if msgs:
-        LOGGER.info('\n'.join(msgs))
-    if nf == 0:
-        LOGGER.warning(f'{prefix}WARNING ⚠️ No labels found in {path}.')
-    x['image'] = im_files
-    x['label'] = label_files
-    x['results'] = nf, nm, ne, nc, len(im_files)
-    x['msgs'] = msgs  # warnings
+        pbar.close()
+        if msgs:
+            LOGGER.info('\n'.join(msgs))
+        if nf == 0:
+            LOGGER.warning(f'{prefix}WARNING ⚠️ No labels found in {path}.')
+        x['image'] = im_files
+        x['label'] = label_files
+        x['results'] = nf, nm, ne, nc, len(im_files)
+        x['msgs'] = msgs  # warnings
 
-    im_target = path.parent.parent / (str(path.parent.stem) +'_generated') / 'images'
-    label_target = path.parent.parent / (str(path.parent.stem) +'_generated') / 'labels'
-    for im_file in im_files:
-        img = Image.open(im_file)
-        im = np.array(img)
+        im_target = path.parent.parent / (str(path.parent.stem) +'_generated') / 'images'
+        label_target = path.parent.parent / (str(path.parent.stem) +'_generated') / 'labels'
+        for im_file in im_files:
+            img = Image.open(im_file)
+            im = np.array(img)
 
-        angle_label_file = img2angle_labels_paths([im_file])
-        angle_label = np.loadtxt(angle_label_file[0], delimiter=',')
-        label = x[im_file][0]
-        angle, height = angle_label
-        if height >= 7:
-            split_count = 5
-        elif height <= 7 and height >= 3:
-            split_count = 2
-        elif height < 3:
-            split_count = 1
+            angle_label_file = img2angle_labels_paths([im_file])
+            angle_label = np.loadtxt(angle_label_file[0], delimiter=',')
+            label = x[im_file][0]
+            angle, height = angle_label
+            if height >= 7:
+                split_count = 5
+            elif height <= 7 and height >= 3:
+                split_count = 2
+            elif height < 3:
+                split_count = 1
 
-        im_arr, label_arr = split_img(im, label, split_count=split_count)
-        
-        Path(im_target).mkdir(parents=True, exist_ok=True)
-        Path(label_target).mkdir(parents=True, exist_ok=True)
-        for i, im in enumerate(im_arr):
-            im_fname = (im_target / (str(Path(im_file).stem) + '_' + str(i))).with_suffix('.jpg')
-            label_fname = (label_target / (str(Path(im_file).stem) + '_' + str(i))).with_suffix('.txt')
-            out_img = Image.fromarray(im)
-            out_img.save(im_fname)
-            np.savetxt(label_fname, label_arr[i], fmt='%d %.6f %.6f %.6f %.6f')
+            im_arr, label_arr = split_img(im, label, split_count=split_count)
+            
+            Path(im_target).mkdir(parents=True, exist_ok=True)
+            Path(label_target).mkdir(parents=True, exist_ok=True)
+            for i, im in enumerate(im_arr):
+                im_fname = (im_target / (str(Path(im_file).stem) + '_' + str(i))).with_suffix('.jpg')
+                label_fname = (label_target / (str(Path(im_file).stem) + '_' + str(i))).with_suffix('.txt')
+                out_img = Image.fromarray(im)
+                out_img.save(im_fname)
+                np.savetxt(label_fname, label_arr[i], fmt='%d %.6f %.6f %.6f %.6f')
     print('end of program')
 
 if __name__ == "__main__":
